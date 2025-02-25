@@ -1,0 +1,31 @@
+name: kyoon-dev
+
+global:
+  TRAINED_ON: "CMS Tier0"
+
+interfaces:
+  chat_app:
+    PORT: 7000
+    EXTERNAL_PORT: 7000
+    HOSTNAME: "t3desk018.mit.edu"
+
+chains:
+  input_lists:
+    - configs/tier0_docs.list
+  prompts:
+    CONDENSING_PROMPT: configs/prompts/condense.prompt
+    MAIN_PROMPT: configs/prompts/tier0.prompt
+    SUMMARY_PROMPT: configs/prompts/summary.prompt
+  chain:
+    MODEL_NAME: OpenAIGPT4
+    CONDENSE_MODEL_NAME: OpenAIGPT4
+    SUMMARY_MODEL_NAME: OpenAIGPT4
+
+utils:
+  data_manager:
+    chromadb_external_port: 8002
+
+locations_of_secrets: 
+    - /work/submit/kyoon/.secrets/api_tokens
+    - /work/submit/kyoon/.secrets/salts_and_internal_passwords
+    - /work/submit/kyoon/.secrets/submit_cleo_and_mailer_passwords
