@@ -17,7 +17,8 @@ env = Environment(
     autoescape=select_autoescape(),
     undefined=ChainableUndefined,
 )
-A2RCHI_DIR = os.path.join(os.path.expanduser('~'), ".a2rchi")
+# A2RCHI_DIR = os.path.join(os.path.expanduser('~'), ".a2rchi")
+A2RCHI_DIR = os.path.join("/work/submit/kyoon/", ".a2rchi")
 BASE_CONFIG_TEMPLATE = "base-config.yaml"
 BASE_DOCKERFILE_LOCATION = "dockerfiles"
 BASE_GRAFANA_DATASOURCES_TEMPLATE = "grafana/datasources.yaml"
@@ -75,6 +76,7 @@ def _prepare_secret(a2rchi_name_dir, secret_name, locations_of_secrets):
     secret_filename = f"{secret_name.lower()}.txt"
     found_secrets = []
 
+    print(secret_filename)
     for location in locations_of_secrets:
         potential_path = os.path.expanduser(os.path.join(location, secret_filename))
         if os.path.isfile(potential_path):
@@ -259,7 +261,8 @@ def create(
         'name', 
         'global.TRAINED_ON',
         'chains.input_lists', 
-        'chains.prompts.CONDENSING_PROMPT', 'chains.prompts.MAIN_PROMPT', 'chains.prompts.SUMMARY_PROMPT'
+        'chains.prompts.CONDENSING_PROMPT', 'chains.prompts.MAIN_PROMPT', 'chains.prompts.SUMMARY_PROMPT',
+        'chains.chain.MODEL_NAME', 'chains.chain.CONDENSE_MODEL_NAME', 'chains.chain.SUMMARY_MODEL_NAME'
     ]
     # load user configuration of A2rchi
     with open(a2rchi_config_filepath, 'r') as f:
@@ -269,6 +272,7 @@ def create(
         if "collection_name" not in a2rchi_config:
             a2rchi_config["collection_name"] = f"collection_{name}"
 
+    print(a2rchi_config)
     locations_of_secrets = a2rchi_config["locations_of_secrets"]
 
     # fetch or generate grafana password
@@ -373,11 +377,21 @@ def create(
     with open(os.path.join(a2rchi_name_dir, "init.sql"), 'w') as f:
         f.write(init_sql)
     
-    # prepare secrets
-    _prepare_secret(a2rchi_name_dir, "openai_api_key", locations_of_secrets)
-    _prepare_secret(a2rchi_name_dir, "anthropic_api_key", locations_of_secrets)
-    _prepare_secret(a2rchi_name_dir, "hf_token", locations_of_secrets)
+    # Prepare secrets
+    user_specified_models = set(a2rchi_config["chains"]["chain"].values())
+    secrets_mapping = {
+        "OpenAIGPT4": "openai_api_key",
+        "OpenAIGPT35": "openai_api_key",
+        "AnthropicLLM": "anthropic_api_key",
+        "HuggingFaceLLM": "hf_token",
+    }
+    for model, secret in secrets_mapping.items():
+        if model in user_specified_models:
+            _prepare_secret(a2rchi_name_dir, secret, locations_of_secrets)
+
+    # Always prepare PostgreSQL password
     _prepare_secret(a2rchi_name_dir, "pg_password", locations_of_secrets)
+
 
     # copy prompts
     shutil.copyfile(a2rchi_config["chains"]["prompts"]["MAIN_PROMPT"], os.path.join(a2rchi_name_dir, "main.prompt"))
